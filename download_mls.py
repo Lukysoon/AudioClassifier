@@ -28,6 +28,7 @@ Na macOS je potřeba mít nainstalovaný ffmpeg:
 import os
 import csv
 import io
+import shutil
 import numpy as np
 from datasets import load_dataset
 from pydub import AudioSegment
@@ -80,12 +81,14 @@ def download_language(language: str):
     print(f"{'='*60}")
 
     # Stažení datasetu z Hugging Face
+    cache_dir = os.path.join(OUTPUT_DIR, ".hf_cache")
     try:
         dataset = load_dataset(
             "facebook/multilingual_librispeech",
             language,
             split=SPLIT,
             trust_remote_code=True,
+            cache_dir=cache_dir,
         )
     except Exception as e:
         print(f"  ❌ Chyba při stahování {language}: {e}")
@@ -129,6 +132,11 @@ def download_language(language: str):
 
     print(f"  ✅ {language}: {total} nahrávek uloženo do {lang_dir}/")
     print(f"     Transkripty: {csv_path}")
+
+    # Smazání HF cache
+    if os.path.exists(cache_dir):
+        shutil.rmtree(cache_dir)
+        print(f"  🗑️  Cache smazána ({cache_dir})")
 
 
 def main():

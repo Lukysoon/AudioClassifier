@@ -11,6 +11,28 @@ Vizualizace audio souborů v 3D prostoru pomocí HuBERT embeddingů a UMAP.
 3. Redukuje 768 dimenzí na 3D pomocí UMAP
 4. Zobrazí interaktivní 3D vizualizaci v prohlížeči
 
+## Rychlý start
+
+Klonování, instalace a stažení všech jazyků:
+
+```bash
+git clone https://github.com/Lukysoon/AudioClassifier.git
+cd AudioClassifier
+python3 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
+pip install -r requirements.txt
+python download_mls.py
+```
+
+Na macOS je potřeba mít nainstalovaný ffmpeg (`brew install ffmpeg`).
+
+Po stažení dat spusťte vizualizaci:
+
+```bash
+python run.py ./data
+```
+
 ## Instalace
 
 ```bash
@@ -32,7 +54,41 @@ data/
 
 ## Stažení dat
 
-Dataset MLS (Multilingual LibriSpeech) je dostupný na:
+### Automatické stažení (doporučeno)
+
+Script `download_mls.py` stáhne MLS 10h limited supervision sety z Hugging Face pro 8 jazyků (english, german, dutch, french, spanish, italian, portuguese, polish) a uloží je jako MP3.
+
+**Závislosti:**
+```bash
+pip3 install datasets soundfile pydub
+```
+
+Na macOS je potřeba mít nainstalovaný ffmpeg:
+```bash
+brew install ffmpeg
+```
+
+**Spuštění:**
+```bash
+python download_mls.py
+```
+
+Výstupní struktura:
+```
+data/
+├── german/
+│   ├── 00000.mp3
+│   ├── 00001.mp3
+│   ├── ...
+│   └── transcripts.csv
+├── english/
+│   └── ...
+└── ...
+```
+
+### Ruční stažení
+
+Dataset MLS (Multilingual LibriSpeech) je také dostupný na:
 - **OpenSLR**: https://www.openslr.org/94/
 
 Stáhněte si audio soubory pro požadované jazyky (např. `mls_german.tar.gz`, `mls_french.tar.gz`) a rozbalte do složky `mls_flac/`.
