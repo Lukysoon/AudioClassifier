@@ -37,7 +37,6 @@ from pydub import AudioSegment
 OUTPUT_DIR = "data"
 SAMPLE_RATE = 16000  # MLS má 16kHz
 LANGUAGES = [
-    "english",
     "german",
     "dutch",
     "french",

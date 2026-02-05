@@ -13,31 +13,16 @@ Vizualizace audio souborů v 3D prostoru pomocí HuBERT embeddingů a UMAP.
 
 ## Rychlý start
 
-Klonování, instalace a stažení všech jazyků:
-
 ```bash
 git clone https://github.com/Lukysoon/AudioClassifier.git
 cd AudioClassifier
-python3 -m venv venv
+./setup.sh
 source venv/bin/activate
-pip install --upgrade pip
-pip install -r requirements.txt
 python download_mls.py
-```
-
-Na macOS je potřeba mít nainstalovaný ffmpeg (`brew install ffmpeg`).
-
-Po stažení dat spusťte vizualizaci:
-
-```bash
 python run.py ./data
 ```
 
-## Instalace
-
-```bash
-pip install -r requirements.txt
-```
+`setup.sh` automaticky nainstaluje ffmpeg, vytvoří virtuální prostředí a nainstaluje Python závislosti.
 
 ## Struktura dat
 
@@ -56,19 +41,8 @@ data/
 
 ### Automatické stažení (doporučeno)
 
-Script `download_mls.py` stáhne MLS 10h limited supervision sety z Hugging Face pro 8 jazyků (english, german, dutch, french, spanish, italian, portuguese, polish) a uloží je jako MP3.
+Script `download_mls.py` stáhne MLS 10h limited supervision sety z Hugging Face pro 7 jazyků (german, dutch, french, spanish, italian, portuguese, polish) a uloží je jako MP3. Cache se po zpracování každého jazyka automaticky maže.
 
-**Závislosti:**
-```bash
-pip3 install datasets soundfile pydub
-```
-
-Na macOS je potřeba mít nainstalovaný ffmpeg:
-```bash
-brew install ffmpeg
-```
-
-**Spuštění:**
 ```bash
 python download_mls.py
 ```
