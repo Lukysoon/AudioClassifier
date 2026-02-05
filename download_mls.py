@@ -4,7 +4,7 @@ Stažení Multilingual LibriSpeech (MLS) - 10h limited supervision sety
 pro všechny dostupné jazyky. Audio se uloží jako MP3.
 
 Struktura výstupu:
-    datasets/
+    data/
     ├── german/
     │   ├── 0001.mp3
     │   ├── 0002.mp3
@@ -33,7 +33,7 @@ from datasets import load_dataset
 from pydub import AudioSegment
 
 # --- Konfigurace ---
-OUTPUT_DIR = "datasets"
+OUTPUT_DIR = "data"
 SAMPLE_RATE = 16000  # MLS má 16kHz
 LANGUAGES = [
     "english",
