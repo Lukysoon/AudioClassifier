@@ -332,12 +332,9 @@ class AudioClassifierPipeline:
 
         print("\nGenerating visualizations...")
 
-        # Get unique audio file paths for embedding
-        audio_files = df["file"].unique().tolist()
-
-        # 3D scatter plot with audio playback
+        # 3D scatter plot
         fig_3d = self.visualizer.plot_3d_scatter(df, title="Audio Embeddings - 3D Visualization")
-        self.visualizer.save_and_open(fig_3d, f"{prefix}_3d.html", audio_files=audio_files)
+        self.visualizer.save_and_open(fig_3d, f"{prefix}_3d.html")
 
         # Distance heatmap
         dist_matrix = calculate_centroid_distances(df)
