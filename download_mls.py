@@ -45,7 +45,7 @@ LANGUAGES = [
     "portuguese",
     "polish",
 ]
-SPLIT = "train.9h"  # ~10h limited supervision set
+SPLIT = "9_hours"  # ~10h limited supervision set
 # -------------------
 
 
