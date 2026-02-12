@@ -20,9 +20,9 @@ else
         fi
     elif [[ "$(uname)" == "Linux" ]]; then
         if command -v apt-get &>/dev/null; then
-            sudo apt-get update && sudo apt-get install -y ffmpeg
+            apt-get update && apt-get install -y ffmpeg
         elif command -v dnf &>/dev/null; then
-            sudo dnf install -y ffmpeg
+            dnf install -y ffmpeg
         else
             echo "❌ Nepodporovaný package manager. Nainstaluj ffmpeg ručně."
             exit 1
