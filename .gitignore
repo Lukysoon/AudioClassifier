@@ -52,6 +52,7 @@ output/
 
 # Data (keep structure but not actual audio files)
 data/*
+data_backup/*
 !data/.gitkeep
 
 # Model cache (HuBERT ~360MB)
@@ -72,3 +73,7 @@ Thumbs.db
 # Environment
 .env
 .env.local
+
+# Audio
+*.wav
+*.mp3

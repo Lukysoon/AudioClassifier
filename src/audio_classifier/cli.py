@@ -76,7 +76,14 @@ Data structure:
         "--pooling",
         choices=["mean", "max"],
         default="mean",
-        help="Pooling strategy for HuBERT embeddings (default: mean)"
+        help="Pooling strategy for ContentVec embeddings (default: mean)"
+    )
+
+    parser.add_argument(
+        "--layer",
+        type=int,
+        default=-1,
+        help="Which transformer layer to use (-1 = last, 6 = middle/phonetic) (default: -1)"
     )
 
     parser.add_argument(
@@ -141,6 +148,19 @@ Data structure:
         help="Minimum chunk duration in seconds for 'keep' mode (default: 0.5)"
     )
 
+    # Cache arguments
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Disable embedding cache (re-process all files from scratch)"
+    )
+
+    parser.add_argument(
+        "--clear-cache",
+        action="store_true",
+        help="Clear existing embedding cache before running"
+    )
+
     # Silence removal arguments
     parser.add_argument(
         "--no-silence-removal",
@@ -153,6 +173,27 @@ Data structure:
         type=float,
         default=40.0,
         help="Silence threshold in dB (default: 40)"
+    )
+
+    # Preprocessing-only mode
+    parser.add_argument(
+        "--preprocessing-only",
+        type=Path,
+        metavar="OUTPUT_DIR",
+        help="Run only preprocessing (load, silence removal, chunking) and save results to OUTPUT_DIR"
+    )
+
+    # Noise reduction arguments
+    parser.add_argument(
+        "--noise-reduction",
+        action="store_true",
+        help="Enable spectral gating noise reduction"
+    )
+
+    parser.add_argument(
+        "--noise-non-stationary",
+        action="store_true",
+        help="Use non-stationary (adaptive) noise reduction instead of stationary"
     )
 
     args = parser.parse_args()
@@ -173,6 +214,7 @@ Data structure:
 
     # Override with CLI arguments
     config.model.pooling = args.pooling
+    config.model.layer = args.layer
     config.umap.n_neighbors = args.n_neighbors
     config.umap.min_dist = args.min_dist
     config.audio.max_duration_seconds = args.max_duration
@@ -190,6 +232,34 @@ Data structure:
     config.audio.silence_removal_enabled = not args.no_silence_removal
     config.audio.silence_threshold_db = args.silence_threshold
 
+    # Noise reduction configuration
+    if args.noise_reduction:
+        config.audio.noise_reduction_enabled = True
+        config.audio.noise_reduction_stationary = not args.noise_non_stationary
+
+    # Preprocessing-only mode
+    if args.preprocessing_only:
+        try:
+            print("=" * 60)
+            print("AUDIO CLASSIFIER - Preprocessing Only")
+            print("=" * 60)
+            print(f"\nInput: {args.data_dir}")
+            print(f"Output: {args.preprocessing_only}")
+            total = preprocess_dataset(
+                input_dir=args.data_dir,
+                output_dir=args.preprocessing_only,
+                chunk_duration=config.audio.chunk_duration_seconds,
+                chunk_handling=config.audio.chunk_handling,
+                min_chunk_duration=config.audio.min_chunk_duration_seconds,
+                silence_removal=config.audio.silence_removal_enabled,
+                silence_threshold_db=config.audio.silence_threshold_db,
+            )
+            print(f"\nDone! {total} chunks saved to: {args.preprocessing_only}/")
+            return 0
+        except Exception as e:
+            print(f"\nError: {e}", file=sys.stderr)
+            return 1
+
     # Run pipeline
     try:
         print("=" * 60)
@@ -198,6 +268,7 @@ Data structure:
         print(f"\nInput: {args.data_dir}")
         print(f"Output: {args.output}")
         print(f"Pooling: {config.model.pooling}")
+        print(f"Layer: {config.model.layer}")
         print(f"UMAP: n_neighbors={config.umap.n_neighbors}, min_dist={config.umap.min_dist}")
 
         if config.audio.chunking_enabled:
@@ -206,7 +277,18 @@ Data structure:
         if config.audio.silence_removal_enabled:
             print(f"Silence removal: enabled (threshold: {config.audio.silence_threshold_db}dB)")
 
-        pipeline = AudioClassifierPipeline(config)
+        if config.audio.noise_reduction_enabled:
+            mode = "stationary" if config.audio.noise_reduction_stationary else "non-stationary"
+            print(f"Noise reduction: enabled ({mode})")
+
+        if args.no_cache:
+            print("Cache: disabled")
+        elif args.clear_cache:
+            print("Cache: clearing and rebuilding")
+        else:
+            print("Cache: enabled")
+
+        pipeline = AudioClassifierPipeline(config, use_cache=not args.no_cache, clear_cache=args.clear_cache)
         df = pipeline.run(args.data_dir)
 
         print(f"\nProcessed {len(df)} audio files")

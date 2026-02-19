@@ -12,12 +12,12 @@ class AudioConfig:
     """Audio preprocessing parameters."""
 
     target_sample_rate: int = 16000
-    """Target sample rate for audio (HuBERT expects 16kHz)."""
+    """Target sample rate for audio (ContentVec expects 16kHz)."""
 
     normalize: bool = True
     """Whether to normalize audio to [-1, 1] range."""
 
-    max_duration_seconds: Optional[float] = 240
+    max_duration_seconds: Optional[float] = 30.0
     """Maximum audio duration in seconds. None for no limit."""
 
     extensions: List[str] = field(default_factory=lambda: [".wav", ".mp3", ".flac", ".ogg"])
@@ -26,7 +26,7 @@ class AudioConfig:
     chunking_enabled: bool = False
     """Enable fixed-length chunking of audio files."""
 
-    chunk_duration_seconds: float = 5.0
+    chunk_duration_seconds: float = 2.0
     """Duration of each chunk in seconds (when chunking is enabled)."""
 
     chunk_handling: Literal["pad", "discard", "keep"] = "discard"
@@ -45,12 +45,19 @@ class AudioConfig:
     silence_threshold_db: float = 40.0
     """Threshold in dB below reference to consider as silence."""
 
+    noise_reduction_enabled: bool = False
+    """Apply spectral gating noise reduction."""
+
+    noise_reduction_stationary: bool = False
+    """If True, use stationary noise reduction (faster, good for constant background noise).
+    If False (default), use non-stationary (adaptive, better for varying noise)."""
+
 
 @dataclass
 class ModelConfig:
-    """HuBERT model parameters."""
+    """ContentVec model parameters."""
 
-    model_name: str = "facebook/hubert-base-ls960"
+    model_name: str = "safe-models/ContentVec"
     """HuggingFace model identifier."""
 
     pooling: Literal["mean", "max"] = "mean"
@@ -162,6 +169,8 @@ class PipelineConfig:
                 "min_chunk_duration_seconds": self.audio.min_chunk_duration_seconds,
                 "silence_removal_enabled": self.audio.silence_removal_enabled,
                 "silence_threshold_db": self.audio.silence_threshold_db,
+                "noise_reduction_enabled": self.audio.noise_reduction_enabled,
+                "noise_reduction_stationary": self.audio.noise_reduction_stationary,
             },
             "model": {
                 "model_name": self.model.model_name,

@@ -1,5 +1,5 @@
 """
-HuBERT feature extraction module.
+ContentVec feature extraction module.
 """
 
 import numpy as np
@@ -14,12 +14,12 @@ from .pooling import get_pooling_strategy
 MODELS_DIR = Path(__file__).parent.parent.parent / "models"
 
 
-class HuBERTExtractor:
-    """Wrapper for HuBERT feature extraction."""
+class ContentVecExtractor:
+    """Wrapper for ContentVec feature extraction."""
 
     def __init__(self, config: ModelConfig | None = None):
         """
-        Initialize the HuBERT extractor.
+        Initialize the ContentVec extractor.
 
         Args:
             config: Model configuration. Uses defaults if None.
@@ -31,7 +31,7 @@ class HuBERTExtractor:
         MODELS_DIR.mkdir(parents=True, exist_ok=True)
         cache_dir = str(MODELS_DIR)
 
-        print(f"Loading HuBERT model: {self.config.model_name}")
+        print(f"Loading ContentVec model: {self.config.model_name}")
         print(f"Model cache: {cache_dir}")
         print(f"Using device: {self.device}")
 
@@ -41,7 +41,7 @@ class HuBERTExtractor:
             cache_dir=cache_dir
         )
 
-        # Load HuBERT model
+        # Load ContentVec model (HuBERT architecture)
         self.model = HubertModel.from_pretrained(
             self.config.model_name,
             cache_dir=cache_dir

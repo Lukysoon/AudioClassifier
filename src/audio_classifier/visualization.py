@@ -4,6 +4,7 @@ Visualization module for 3D plots and heatmaps using Plotly.
 
 import base64
 import hashlib
+import os
 import webbrowser
 from typing import Dict, List, Optional
 
@@ -84,7 +85,21 @@ class Visualizer:
         """
         # Get filename from full path for hover
         df = df.copy()
-        df["filename"] = df["file"].apply(lambda x: Path(x).name)
+
+        # Build hover label with chunk info when available
+        if "display_name" in df.columns and "start_time" in df.columns:
+            def _hover_label(row):
+                name = row["display_name"]
+                if pd.notna(row["start_time"]) and pd.notna(row["end_time"]):
+                    return f"{name} [{row['start_time']:.1f}s - {row['end_time']:.1f}s]"
+                return name
+            df["hover_label"] = df.apply(_hover_label, axis=1)
+        else:
+            df["hover_label"] = df["file"].apply(lambda x: Path(x).name)
+
+        custom_cols = ["file"]
+        if "start_time" in df.columns:
+            custom_cols.extend(["start_time", "end_time"])
 
         fig = px.scatter_3d(
             df,
@@ -92,8 +107,8 @@ class Visualizer:
             y="y",
             z="z",
             color="label",
-            hover_name="filename",
-            custom_data=["file"],
+            hover_name="hover_label",
+            custom_data=custom_cols,
             title=title
         )
 
@@ -328,7 +343,8 @@ class Visualizer:
 
             document.getElementById('audio-stop-btn').onclick = stopAudio;
 
-            function attachClickHandler() {{
+            function attachClickHandler(attempts) {{
+                attempts = attempts || 0;
                 var plotDiv = document.querySelector('.plotly-graph-div');
                 if (plotDiv && plotDiv.on) {{
                     plotDiv.on('plotly_click', function(data) {{
@@ -340,8 +356,8 @@ class Visualizer:
                         }}
                     }});
                     console.log('Audio click handler attached');
-                }} else {{
-                    setTimeout(attachClickHandler, 100);
+                }} else if (attempts < 50) {{
+                    setTimeout(function() {{ attachClickHandler(attempts + 1); }}, 100);
                 }}
             }}
 
@@ -398,11 +414,285 @@ class Visualizer:
         print(f"Saved: {output_path}")
         return output_path
 
+    def _generate_audio_player_html_standalone(self) -> str:
+        """
+        Generate HTML for the audio player UI without pre-created audio elements.
+        Includes a toggle button to enable/disable audio playback.
+        """
+        return '''
+        <div id="audio-toggle-container" style="
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 10000;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        ">
+            <button id="audio-toggle-btn" style="
+                background: rgba(0,0,0,0.7);
+                border: 2px solid #555;
+                color: #aaa;
+                padding: 10px 16px;
+                border-radius: 8px;
+                cursor: pointer;
+                font-size: 14px;
+                font-weight: 500;
+                transition: all 0.2s;
+            ">&#9835; Audio OFF</button>
+        </div>
+        <div id="audio-player-container" style="
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.85);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            z-index: 10000;
+            display: none;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            min-width: 250px;
+        ">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <button id="audio-stop-btn" style="
+                    background: #e74c3c;
+                    border: none;
+                    color: white;
+                    padding: 8px 16px;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 14px;
+                    font-weight: 500;
+                    transition: background 0.2s;
+                " onmouseover="this.style.background='#c0392b'" onmouseout="this.style.background='#e74c3c'">Stop</button>
+                <div style="flex: 1;">
+                    <div id="audio-filename" style="font-weight: 600; margin-bottom: 4px; font-size: 14px;"></div>
+                    <div id="audio-status" style="font-size: 12px; opacity: 0.8; display: flex; align-items: center;">
+                        <span id="audio-indicator" style="
+                            display: inline-block;
+                            width: 8px;
+                            height: 8px;
+                            background: #2ecc71;
+                            border-radius: 50%;
+                            margin-right: 8px;
+                            animation: pulse 1s infinite;
+                        "></span>
+                        <span id="audio-time">Playing...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <style>
+            @keyframes pulse {
+                0%, 100% { opacity: 1; transform: scale(1); }
+                50% { opacity: 0.5; transform: scale(0.9); }
+            }
+        </style>
+        '''
+
+    def _generate_click_handler_js_dynamic(self, data_dir_relative: str) -> str:
+        """
+        Generate JavaScript for click-to-play with on-demand audio loading.
+        Supports chunk-aware playback using start_time/end_time from customdata.
+
+        Args:
+            data_dir_relative: Relative path from HTML file to data directory.
+        """
+        return f'''
+        <script>
+        (function() {{
+            var currentAudio = null;
+            var audioEnabled = false;
+            var dataPrefix = "{data_dir_relative}";
+
+            var toggleBtn = document.getElementById('audio-toggle-btn');
+            toggleBtn.onclick = function() {{
+                audioEnabled = !audioEnabled;
+                if (audioEnabled) {{
+                    toggleBtn.textContent = '\\u266B Audio ON';
+                    toggleBtn.style.background = 'rgba(46,204,113,0.85)';
+                    toggleBtn.style.borderColor = '#2ecc71';
+                    toggleBtn.style.color = 'white';
+                }} else {{
+                    stopAudio();
+                    toggleBtn.textContent = '\\u266B Audio OFF';
+                    toggleBtn.style.background = 'rgba(0,0,0,0.7)';
+                    toggleBtn.style.borderColor = '#555';
+                    toggleBtn.style.color = '#aaa';
+                }}
+            }};
+
+            function stopAudio() {{
+                if (currentAudio) {{
+                    currentAudio.pause();
+                    currentAudio.currentTime = 0;
+                    currentAudio = null;
+                }}
+                document.getElementById('audio-player-container').style.display = 'none';
+            }}
+
+            function formatTime(seconds) {{
+                var mins = Math.floor(seconds / 60);
+                var secs = Math.floor(seconds % 60);
+                return mins + ':' + (secs < 10 ? '0' : '') + secs;
+            }}
+
+            function getRelativeAudioUrl(filePath) {{
+                if (filePath.startsWith('/')) {{
+                    var parts = filePath.split('/');
+                    var dataIdx = parts.lastIndexOf('data');
+                    if (dataIdx >= 0) {{
+                        var subPath = parts.slice(dataIdx + 1).join('/');
+                        return dataPrefix + '/' + subPath;
+                    }}
+                    return dataPrefix + '/' + parts.slice(-2).join('/');
+                }} else {{
+                    var firstSlash = filePath.indexOf('/');
+                    if (firstSlash >= 0) {{
+                        var subPath = filePath.substring(firstSlash + 1);
+                        return dataPrefix + '/' + subPath;
+                    }}
+                    return dataPrefix + '/' + filePath;
+                }}
+            }}
+
+            function playAudio(filePath, filename, startTime, endTime) {{
+                stopAudio();
+
+                var url = getRelativeAudioUrl(filePath);
+                var audio = new Audio(url);
+                currentAudio = audio;
+
+                var container = document.getElementById('audio-player-container');
+                container.style.display = 'block';
+                document.getElementById('audio-filename').textContent = filename;
+                document.getElementById('audio-time').textContent = 'Loading...';
+                document.getElementById('audio-indicator').style.background = '#f39c12';
+
+                var hasChunk = startTime != null && !isNaN(startTime);
+
+                audio.ontimeupdate = function() {{
+                    var displayStart = hasChunk ? startTime : 0;
+                    var displayEnd = (endTime != null && !isNaN(endTime)) ? endTime : audio.duration;
+                    var current = formatTime(audio.currentTime - displayStart);
+                    var duration = formatTime(displayEnd - displayStart);
+                    document.getElementById('audio-time').textContent = current + ' / ' + duration;
+
+                    if (endTime != null && !isNaN(endTime) && audio.currentTime >= endTime) {{
+                        stopAudio();
+                    }}
+                }};
+
+                audio.onended = function() {{
+                    stopAudio();
+                }};
+
+                audio.onerror = function() {{
+                    document.getElementById('audio-time').textContent = 'Error (use HTTP server)';
+                    document.getElementById('audio-indicator').style.background = '#e74c3c';
+                }};
+
+                var started = false;
+                audio.oncanplay = function() {{
+                    if (started) return;
+                    started = true;
+                    if (hasChunk) {{
+                        audio.currentTime = startTime;
+                    }}
+                    audio.play().then(function() {{
+                        document.getElementById('audio-indicator').style.background = '#2ecc71';
+                    }}).catch(function(error) {{
+                        document.getElementById('audio-time').textContent = 'Playback failed';
+                        document.getElementById('audio-indicator').style.background = '#e74c3c';
+                    }});
+                }};
+
+                audio.load();
+            }}
+
+            document.getElementById('audio-stop-btn').onclick = stopAudio;
+
+            function attachClickHandler(attempts) {{
+                attempts = attempts || 0;
+                var plotDiv = document.querySelector('.plotly-graph-div');
+                if (plotDiv && plotDiv.on) {{
+                    plotDiv.on('plotly_click', function(data) {{
+                        if (!audioEnabled) return;
+                        if (data.points && data.points.length > 0) {{
+                            var point = data.points[0];
+                            var filePath = point.customdata[0];
+                            var startTime = point.customdata.length > 1 ? point.customdata[1] : null;
+                            var endTime = point.customdata.length > 2 ? point.customdata[2] : null;
+                            var filename = point.hovertext || filePath.split('/').pop();
+                            playAudio(filePath, filename, startTime, endTime);
+                        }}
+                    }});
+                }} else if (attempts < 50) {{
+                    setTimeout(function() {{ attachClickHandler(attempts + 1); }}, 100);
+                }}
+            }}
+
+            if (document.readyState === 'loading') {{
+                document.addEventListener('DOMContentLoaded', attachClickHandler);
+            }} else {{
+                setTimeout(attachClickHandler, 100);
+            }}
+        }})();
+        </script>
+        '''
+
+    def save_figure_with_audio_paths(
+        self,
+        fig: go.Figure,
+        filename: str,
+        data_dir: Path,
+    ) -> Path:
+        """
+        Save figure to HTML with on-demand audio playback via relative paths.
+
+        Args:
+            fig: Plotly Figure object.
+            filename: Output filename.
+            data_dir: Path to the data directory containing audio files.
+
+        Returns:
+            Full path to saved file.
+        """
+        output_path = self.config.output_dir / filename
+
+        data_dir_relative = os.path.relpath(
+            data_dir.resolve(), output_path.parent.resolve()
+        )
+
+        html_content = fig.to_html(full_html=True, include_plotlyjs=True)
+
+        player_html = self._generate_audio_player_html_standalone()
+        click_handler_js = self._generate_click_handler_js_dynamic(data_dir_relative)
+
+        injection_point = html_content.rfind("</body>")
+        html_content = (
+            html_content[:injection_point]
+            + player_html
+            + click_handler_js
+            + html_content[injection_point:]
+        )
+
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(html_content)
+
+        print(f"Saved: {output_path}")
+        print(f"\nTo play audio on click, serve via HTTP:")
+        print(f"  python -m http.server 8000")
+        print(f"Then open: http://localhost:8000/{output_path}")
+
+        return output_path
+
     def save_and_open(
         self,
         fig: go.Figure,
         filename: str,
-        audio_files: Optional[List[str]] = None
+        audio_files: Optional[List[str]] = None,
+        data_dir: Optional[Path] = None,
     ) -> Path:
         """
         Save figure and optionally open in browser.
@@ -410,12 +700,15 @@ class Visualizer:
         Args:
             fig: Plotly Figure object.
             filename: Output filename.
-            audio_files: Optional list of audio file paths for playback.
+            audio_files: Optional list of audio file paths for base64 embedding.
+            data_dir: Optional data directory for on-demand audio loading.
 
         Returns:
             Full path to saved file.
         """
-        if audio_files:
+        if data_dir is not None:
+            filepath = self.save_figure_with_audio_paths(fig, filename, data_dir)
+        elif audio_files:
             filepath = self.save_figure_with_audio(fig, filename, audio_files)
         else:
             filepath = self.save_figure(fig, filename)

@@ -87,8 +87,11 @@ class AudioPreprocessor:
             )
             waveform = resampler(waveform)
 
-        # Remove silence
+        # Noise reduction (before silence removal for better silence detection)
         waveform_np = waveform.squeeze().numpy()
+        waveform_np = self._reduce_noise(waveform_np)
+
+        # Remove silence
         waveform_np = self._remove_silence(waveform_np)
         waveform = torch.from_numpy(waveform_np).unsqueeze(0)
 
@@ -139,8 +142,11 @@ class AudioPreprocessor:
             )
             waveform = resampler(waveform)
 
-        # Remove silence before any chunking
+        # Noise reduction (before silence removal for better silence detection)
         waveform_np = waveform.squeeze().numpy()
+        waveform_np = self._reduce_noise(waveform_np)
+
+        # Remove silence before any chunking
         waveform_np = self._remove_silence(waveform_np)
         waveform = torch.from_numpy(waveform_np).unsqueeze(0)
 
@@ -219,6 +225,27 @@ class AudioPreprocessor:
             chunk_index += 1
 
         return chunks
+
+    def _reduce_noise(self, waveform: np.ndarray) -> np.ndarray:
+        """
+        Apply spectral gating noise reduction.
+
+        Args:
+            waveform: Audio samples as numpy array.
+
+        Returns:
+            Waveform with reduced noise.
+        """
+        if not self.config.noise_reduction_enabled:
+            return waveform
+
+        import noisereduce as nr
+
+        return nr.reduce_noise(
+            y=waveform,
+            sr=self.config.target_sample_rate,
+            stationary=self.config.noise_reduction_stationary
+        )
 
     def _normalize(self, waveform: np.ndarray) -> np.ndarray:
         """

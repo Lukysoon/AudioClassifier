@@ -1,13 +1,13 @@
 # Audio Classifier
 
-Vizualizace audio souborů v 3D prostoru pomocí HuBERT embeddingů a UMAP.
+Vizualizace audio souborů v 3D prostoru pomocí ContentVec embeddingů a UMAP.
 
-![Pipeline](https://img.shields.io/badge/Pipeline-Audio→HuBERT→UMAP→3D-blue)
+![Pipeline](https://img.shields.io/badge/Pipeline-Audio→ContentVec→UMAP→3D-blue)
 
 ## Co to dělá
 
 1. Načte audio soubory z adresářů (každá složka = jedna kategorie)
-2. Extrahuje features pomocí HuBERT modelu
+2. Extrahuje features pomocí ContentVec modelu
 3. Redukuje 768 dimenzí na 3D pomocí UMAP
 4. Zobrazí interaktivní 3D vizualizaci v prohlížeči
 
@@ -18,7 +18,6 @@ git clone https://github.com/Lukysoon/AudioClassifier.git
 cd AudioClassifier
 ./setup.sh
 source venv/bin/activate
-python download_mls.py
 python run.py ./data
 ```
 
@@ -37,59 +36,7 @@ data/
     └── audio4.flac
 ```
 
-## Stažení dat
-
-### Automatické stažení (doporučeno)
-
-Script `download_mls.py` stáhne MLS 10h limited supervision sety z Hugging Face pro 7 jazyků (german, dutch, french, spanish, italian, portuguese, polish) a uloží je jako MP3. Cache se po zpracování každého jazyka automaticky maže.
-
-```bash
-python download_mls.py
-```
-
-Výstupní struktura:
-```
-data/
-├── german/
-│   ├── 00000.mp3
-│   ├── 00001.mp3
-│   ├── ...
-│   └── transcripts.csv
-├── english/
-│   └── ...
-└── ...
-```
-
-### Ruční stažení
-
-Dataset MLS (Multilingual LibriSpeech) je také dostupný na:
-- **OpenSLR**: https://www.openslr.org/94/
-
-Stáhněte si audio soubory pro požadované jazyky (např. `mls_german.tar.gz`, `mls_french.tar.gz`) a rozbalte do složky `mls_flac/`.
-
-⚠️ Dataset je velký (desítky GB na jazyk). Pro testování stačí stáhnout menší subset.
-
-## Použití
-
-### Příprava dat
-
-**Konverze FLAC/MP3 → WAV:**
-
-```bash
-python convert_audio.py --input ./mls_flac --output ./data --pocet 20
-```
-
-Očekávaná struktura vstupu:
-```
-mls_flac/
-├── german/
-│   └── *.flac
-├── french/
-│   └── *.flac
-└── ...
-```
-
-### Spuštění
+## Spuštění
 
 ```bash
 python run.py ./data
@@ -106,12 +53,14 @@ source venv/bin/activate && python run.py ./data --chunk 2.0 --chunk-handling di
 
 | Parametr | Výchozí | Popis |
 |----------|---------|-------|
-| `--max-duration` | `240` | Maximální délka audia v sekundách |
+| `--max-duration` | `30` | Maximální délka audia v sekundách |
 | `--chunk` | vypnuto | Rozdělí audio na chunky zadané délky (s) |
 | `--chunk-handling` | `discard` | Zpracování posledního krátkého chunku: `pad` / `discard` / `keep` |
 | `--min-chunk` | `0.5` | Minimální délka chunku pro `keep` režim (s) |
 | `--no-silence-removal` | `False` | Vypnout odstranění ticha |
 | `--silence-threshold` | `40` | Práh ticha v dB (vyšší = méně citlivé) |
+| `--noise-reduction` | vypnuto | Zapnout spektrální šumovou redukci |
+| `--noise-non-stationary` | `False` | Adaptivní (non-stationary) šumová redukce místo stationary |
 
 #### Model parametry
 
@@ -126,6 +75,13 @@ source venv/bin/activate && python run.py ./data --chunk 2.0 --chunk-handling di
 | `--n-neighbors` | `15` | Počet sousedů - nižší = těsnější clustery |
 | `--min-dist` | `0.1` | Minimální vzdálenost - nižší = hustší clustery |
 
+#### Cache parametry
+
+| Parametr | Výchozí | Popis |
+|----------|---------|-------|
+| `--no-cache` | `False` | Vypnout embedding cache (přepočítat vše od začátku) |
+| `--clear-cache` | `False` | Smazat existující cache před spuštěním |
+
 #### Výstupní parametry
 
 | Parametr | Výchozí | Popis |
@@ -135,6 +91,7 @@ source venv/bin/activate && python run.py ./data --chunk 2.0 --chunk-handling di
 | `--save-embeddings` | vypnuto | Uložit embeddingy do .npz souboru |
 | `--prefix` | `audio_classifier` | Prefix pro názvy výstupních souborů |
 | `--config` / `-c` | - | Načíst konfiguraci z YAML souboru |
+| `--preprocessing-only DIR` | - | Jen preprocessing (bez embeddingů), výstup uložit do DIR |
 
 #### Příklady
 
@@ -154,6 +111,21 @@ python run.py ./data --no-silence-removal
 # Citlivější detekce ticha (odstraní i tišší zvuky)
 python run.py ./data --silence-threshold 30
 
+# Šumová redukce
+python run.py ./data --noise-reduction
+
+# Adaptivní šumová redukce (pro proměnlivý šum)
+python run.py ./data --noise-reduction --noise-non-stationary
+
+# Bez cache (přepočítat vše)
+python run.py ./data --no-cache
+
+# Smazat cache a přepočítat
+python run.py ./data --clear-cache
+
+# Jen preprocessing (uložit chunky bez embeddingů)
+python run.py ./data --chunk 5.0 --preprocessing-only ./preprocessed
+
 # Produkční běh bez prohlížeče
 python run.py ./data --no-open --save-embeddings embeddings.npz -o ./results
 ```
@@ -171,8 +143,16 @@ python run.py --help
 ## Požadavky
 
 - Python 3.10+
-- ~360 MB pro HuBERT model (stáhne se automaticky při prvním spuštění)
+- ~360 MB pro ContentVec model (stáhne se automaticky při prvním spuštění)
 
 ## Podporované formáty
 
 `.wav`, `.mp3`, `.flac`, `.ogg`
+
+## Export z parquet
+
+```bash
+python parse_audio_parquet.py --input data.parquet --info
+
+python parse_audio_parquet.py --input data.parquet --output_dir ./audio_files
+```
