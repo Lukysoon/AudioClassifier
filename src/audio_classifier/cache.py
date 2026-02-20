@@ -142,6 +142,14 @@ class EmbeddingCache:
         except Exception as e:
             print(f"Warning: Could not save cache ({e})")
 
+    def load_all_entries(self) -> Dict[str, List[dict]]:
+        """Return all cached entries without filesystem checks.
+
+        Returns:
+            Dict mapping resolved file paths to their list of sample dicts.
+        """
+        return {path: entry["samples"] for path, entry in self.entries.items()}
+
     def clear(self) -> None:
         """Delete the cache file from disk."""
         if self.cache_path.exists():

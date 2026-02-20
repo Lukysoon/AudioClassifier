@@ -39,7 +39,7 @@ data/
 ## Spuštění
 
 ```bash
-python run.py ./data
+python run.py ./data --chunk 10.0 --clear-cache
 ```
 
 ### Parametry

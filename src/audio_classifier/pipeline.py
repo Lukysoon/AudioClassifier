@@ -2,6 +2,7 @@
 Main pipeline orchestration for the Audio Classifier.
 """
 
+import pickle
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -9,7 +10,7 @@ from dataclasses import dataclass
 from typing import List, Optional, Union
 from tqdm import tqdm
 
-from .cache import EmbeddingCache, compute_config_hash
+from .cache import CACHE_FILENAME, EmbeddingCache, compute_config_hash
 from .config import PipelineConfig
 from .preprocessing import AudioPreprocessor
 from .feature_extraction import ContentVecExtractor
@@ -329,6 +330,49 @@ class AudioClassifierPipeline:
         if cache_hits > 0:
             print(f"Cache: {cache_hits} files loaded from cache, {processed_files} newly processed")
         print(f"Successfully extracted {len(self.samples)} chunk embeddings from {len(file_paths) - len(failed_files)} files")
+
+    def load_embeddings_from_cache(self) -> None:
+        """Load embeddings directly from cache, skipping audio processing.
+
+        Reads all entries from the embedding cache file and reconstructs
+        AudioSample objects. Labels are derived from file paths (parent folder name).
+
+        Raises:
+            FileNotFoundError: If no cache file exists in the output directory.
+            RuntimeError: If the cache is empty.
+        """
+        cache_path = Path(self.config.visualization.output_dir) / CACHE_FILENAME
+        if not cache_path.exists():
+            raise FileNotFoundError(
+                f"No embedding cache found at {cache_path}. "
+                "Run the full pipeline first to generate cached embeddings."
+            )
+
+        # Load cache directly — ignore config hash so UMAP param changes don't invalidate
+        with open(cache_path, "rb") as f:
+            data = pickle.load(f)
+
+        entries = data.get("entries", {})
+        if not entries:
+            raise RuntimeError("Embedding cache is empty. Run the full pipeline first.")
+
+        self.samples = []
+        for file_path, entry in entries.items():
+            label = Path(file_path).parent.name
+            for sample_dict in entry["samples"]:
+                self.samples.append(AudioSample(
+                    file_path=file_path,
+                    label=label,
+                    embedding=sample_dict["embedding"],
+                    chunk_index=sample_dict.get("chunk_index"),
+                    start_time_seconds=sample_dict.get("start_time_seconds"),
+                    end_time_seconds=sample_dict.get("end_time_seconds"),
+                    is_padded=sample_dict.get("is_padded", False),
+                ))
+
+        labels = set(s.label for s in self.samples)
+        print(f"\nLoaded {len(self.samples)} embeddings from cache")
+        print(f"Categories ({len(labels)}): {sorted(labels)}")
 
     def reduce_dimensions(self) -> None:
         """Reduce embeddings from 768D to 3D using UMAP."""

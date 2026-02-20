@@ -73,10 +73,17 @@ Data structure:
     )
 
     parser.add_argument(
+        "--model",
+        choices=["contentvec", "hubert-base", "hubert-large"],
+        default="contentvec",
+        help="Model to use for embedding extraction (default: contentvec)"
+    )
+
+    parser.add_argument(
         "--pooling",
         choices=["mean", "max"],
         default="mean",
-        help="Pooling strategy for ContentVec embeddings (default: mean)"
+        help="Pooling strategy for embeddings (default: mean)"
     )
 
     parser.add_argument(
@@ -98,6 +105,13 @@ Data structure:
         type=float,
         default=0.1,
         help="UMAP min_dist parameter - smaller = denser clusters (default: 0.1)"
+    )
+
+    parser.add_argument(
+        "--repulsion",
+        type=float,
+        default=1.0,
+        help="UMAP repulsion_strength - higher = more inter-cluster separation (default: 1.0)"
     )
 
     parser.add_argument(
@@ -183,6 +197,13 @@ Data structure:
         help="Run only preprocessing (load, silence removal, chunking) and save results to OUTPUT_DIR"
     )
 
+    # UMAP-only mode
+    parser.add_argument(
+        "--umap-only",
+        action="store_true",
+        help="Skip audio processing, load embeddings from cache and re-run only UMAP + visualization"
+    )
+
     # Noise reduction arguments
     parser.add_argument(
         "--noise-reduction",
@@ -213,10 +234,17 @@ Data structure:
         config = PipelineConfig()
 
     # Override with CLI arguments
+    model_map = {
+        "contentvec": "safe-models/ContentVec",
+        "hubert-base": "facebook/hubert-base-ls960",
+        "hubert-large": "facebook/hubert-large-ll60k",
+    }
+    config.model.model_name = model_map[args.model]
     config.model.pooling = args.pooling
     config.model.layer = args.layer
     config.umap.n_neighbors = args.n_neighbors
     config.umap.min_dist = args.min_dist
+    config.umap.repulsion_strength = args.repulsion
     config.audio.max_duration_seconds = args.max_duration
     config.visualization.output_dir = args.output
     config.visualization.auto_open = not args.no_open
@@ -255,6 +283,26 @@ Data structure:
                 silence_threshold_db=config.audio.silence_threshold_db,
             )
             print(f"\nDone! {total} chunks saved to: {args.preprocessing_only}/")
+            return 0
+        except Exception as e:
+            print(f"\nError: {e}", file=sys.stderr)
+            return 1
+
+    # UMAP-only mode
+    if args.umap_only:
+        try:
+            print("=" * 60)
+            print("AUDIO CLASSIFIER - UMAP Only")
+            print("=" * 60)
+            print(f"\nUMAP: n_neighbors={config.umap.n_neighbors}, min_dist={config.umap.min_dist}")
+
+            pipeline = AudioClassifierPipeline(config)
+            pipeline.data_dir = args.data_dir.resolve()
+            pipeline.load_embeddings_from_cache()
+            pipeline.reduce_dimensions()
+            pipeline.visualize_and_save(prefix=args.prefix)
+
+            print(f"\nDone! Output saved to: {config.visualization.output_dir}/")
             return 0
         except Exception as e:
             print(f"\nError: {e}", file=sys.stderr)

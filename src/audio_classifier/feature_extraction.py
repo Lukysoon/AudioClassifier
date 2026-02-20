@@ -31,7 +31,7 @@ class ContentVecExtractor:
         MODELS_DIR.mkdir(parents=True, exist_ok=True)
         cache_dir = str(MODELS_DIR)
 
-        print(f"Loading ContentVec model: {self.config.model_name}")
+        print(f"Loading model: {self.config.model_name}")
         print(f"Model cache: {cache_dir}")
         print(f"Using device: {self.device}")
 

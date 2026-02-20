@@ -23,10 +23,10 @@ class AudioConfig:
     extensions: List[str] = field(default_factory=lambda: [".wav", ".mp3", ".flac", ".ogg"])
     """Supported audio file extensions."""
 
-    chunking_enabled: bool = False
+    chunking_enabled: bool = True
     """Enable fixed-length chunking of audio files."""
 
-    chunk_duration_seconds: float = 2.0
+    chunk_duration_seconds: float = 10.0
     """Duration of each chunk in seconds (when chunking is enabled)."""
 
     chunk_handling: Literal["pad", "discard", "keep"] = "discard"
@@ -36,7 +36,7 @@ class AudioConfig:
        - 'keep': Keep as-is (shorter chunk)
     """
 
-    min_chunk_duration_seconds: float = 0.5
+    min_chunk_duration_seconds: float = 10.0
     """Minimum duration for 'keep' mode - chunks shorter than this are discarded."""
 
     silence_removal_enabled: bool = True
@@ -45,7 +45,7 @@ class AudioConfig:
     silence_threshold_db: float = 40.0
     """Threshold in dB below reference to consider as silence."""
 
-    noise_reduction_enabled: bool = False
+    noise_reduction_enabled: bool = True
     """Apply spectral gating noise reduction."""
 
     noise_reduction_stationary: bool = False
@@ -77,14 +77,17 @@ class UMAPConfig:
     n_components: int = 3
     """Number of output dimensions."""
 
-    n_neighbors: int = 15
+    n_neighbors: int = 5
     """Number of neighbors for local structure. Smaller = more local clusters."""
 
-    min_dist: float = 0.1
+    min_dist: float = 0.05
     """Minimum distance in low-dim space. Smaller = tighter clusters."""
 
     metric: str = "cosine"
     """Distance metric. 'cosine' is good for embeddings."""
+
+    repulsion_strength: float = 1.0
+    """Strength of repulsion between non-neighbor points. Higher = more inter-cluster separation."""
 
     random_state: int = 42
     """Random seed for reproducibility."""
@@ -97,10 +100,10 @@ class VisualizationConfig:
     output_dir: Path = field(default_factory=lambda: Path("./output"))
     """Directory for output HTML files."""
 
-    marker_size: int = 5
+    marker_size: int = 3
     """Size of markers in 3D plot."""
 
-    marker_opacity: float = 0.8
+    marker_opacity: float = 0.9
     """Opacity of markers (0-1)."""
 
     color_scale: str = "Viridis"
@@ -183,6 +186,7 @@ class PipelineConfig:
                 "n_neighbors": self.umap.n_neighbors,
                 "min_dist": self.umap.min_dist,
                 "metric": self.umap.metric,
+                "repulsion_strength": self.umap.repulsion_strength,
                 "random_state": self.umap.random_state,
             },
             "visualization": {

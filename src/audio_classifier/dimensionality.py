@@ -38,6 +38,7 @@ class DimensionalityReducer:
             n_neighbors=self.config.n_neighbors,
             min_dist=self.config.min_dist,
             metric=self.config.metric,
+            repulsion_strength=self.config.repulsion_strength,
             random_state=self.config.random_state,
             verbose=False
         )
