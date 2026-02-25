@@ -76,7 +76,7 @@ Data structure:
         "--pooling",
         choices=["mean", "max"],
         default="mean",
-        help="Pooling strategy for HuBERT embeddings (default: mean)"
+        help="Pooling strategy for ContentVec embeddings (default: mean)"
     )
 
     parser.add_argument(
@@ -117,6 +117,12 @@ Data structure:
         "--save-embeddings",
         type=Path,
         help="Save embeddings to .npz file for later use"
+    )
+
+    parser.add_argument(
+        "--load-cache",
+        type=Path,
+        help="Load pre-computed embeddings from .pkl cache file (skips model loading)"
     )
 
     # Chunking arguments
@@ -207,14 +213,21 @@ Data structure:
             print(f"Silence removal: enabled (threshold: {config.audio.silence_threshold_db}dB)")
 
         pipeline = AudioClassifierPipeline(config)
-        df = pipeline.run(args.data_dir)
 
-        print(f"\nProcessed {len(df)} audio files")
+        if args.load_cache:
+            # Load from cache - skip model loading and extraction
+            pipeline.load_from_cache(args.load_cache)
+            pipeline.reduce_dimensions()
+        else:
+            df = pipeline.run(args.data_dir)
+
+            # Save embeddings if requested
+            if args.save_embeddings:
+                pipeline.save_embeddings(args.save_embeddings)
+
+        df = pipeline.get_dataframe()
+        print(f"\nProcessed {len(df)} samples")
         print(f"Categories: {sorted(df['label'].unique().tolist())}")
-
-        # Save embeddings if requested
-        if args.save_embeddings:
-            pipeline.save_embeddings(args.save_embeddings)
 
         # Generate visualizations
         pipeline.visualize_and_save(prefix=args.prefix)

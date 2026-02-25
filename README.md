@@ -1,13 +1,13 @@
 # Audio Classifier
 
-Vizualizace audio souborů v 3D prostoru pomocí HuBERT embeddingů a UMAP.
+Vizualizace audio souborů v 3D prostoru pomocí ContentVec embeddingů a UMAP.
 
-![Pipeline](https://img.shields.io/badge/Pipeline-Audio→HuBERT→UMAP→3D-blue)
+![Pipeline](https://img.shields.io/badge/Pipeline-Audio→ContentVec→UMAP→3D-blue)
 
 ## Co to dělá
 
 1. Načte audio soubory z adresářů (každá složka = jedna kategorie)
-2. Extrahuje features pomocí HuBERT modelu
+2. Extrahuje features pomocí ContentVec modelu
 3. Redukuje 768 dimenzí na 3D pomocí UMAP
 4. Zobrazí interaktivní 3D vizualizaci v prohlížeči
 
@@ -141,7 +141,7 @@ python run.py --help
 ## Požadavky
 
 - Python 3.10+
-- ~360 MB pro HuBERT model (stáhne se automaticky při prvním spuštění)
+- ~360 MB pro ContentVec model (stáhne se automaticky při prvním spuštění)
 
 ## Podporované formáty
 

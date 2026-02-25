@@ -1,8 +1,8 @@
 """
-Audio Classifier - Audio classification and visualization using HuBERT embeddings.
+Audio Classifier - Audio classification and visualization using ContentVec embeddings.
 
 This package provides tools for:
-- Extracting audio embeddings using HuBERT
+- Extracting audio embeddings using ContentVec
 - Dimensionality reduction with UMAP
 - Interactive 3D visualization with Plotly
 """

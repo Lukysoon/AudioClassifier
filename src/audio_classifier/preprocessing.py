@@ -53,7 +53,7 @@ class AudioPreprocessor:
         Performs the following transformations:
         1. Load raw audio from file
         2. Convert stereo to mono (average channels)
-        3. Resample to target sample rate (16kHz for HuBERT)
+        3. Resample to target sample rate (16kHz for ContentVec)
         4. Truncate to max duration if configured
         5. Normalize to [-1, 1] range if configured
 

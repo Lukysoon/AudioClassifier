@@ -12,7 +12,7 @@ class AudioConfig:
     """Audio preprocessing parameters."""
 
     target_sample_rate: int = 16000
-    """Target sample rate for audio (HuBERT expects 16kHz)."""
+    """Target sample rate for audio (ContentVec expects 16kHz)."""
 
     normalize: bool = True
     """Whether to normalize audio to [-1, 1] range."""
@@ -48,9 +48,9 @@ class AudioConfig:
 
 @dataclass
 class ModelConfig:
-    """HuBERT model parameters."""
+    """ContentVec model parameters."""
 
-    model_name: str = "facebook/hubert-base-ls960"
+    model_name: str = "safe-models/ContentVec"
     """HuggingFace model identifier."""
 
     pooling: Literal["mean", "max"] = "mean"
@@ -90,13 +90,13 @@ class VisualizationConfig:
     output_dir: Path = field(default_factory=lambda: Path("./output"))
     """Directory for output HTML files."""
 
-    marker_size: int = 5
+    marker_size: int = 3
     """Size of markers in 3D plot."""
 
     marker_opacity: float = 0.8
     """Opacity of markers (0-1)."""
 
-    color_scale: str = "Viridis"
+    color_scale: str = "YlGnBu"
     """Color scale for heatmaps."""
 
     auto_open: bool = True
