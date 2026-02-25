@@ -1,5 +1,6 @@
 """
 ContentVec feature extraction module.
+ContentVec feature extraction module.
 """
 
 import numpy as np
@@ -16,9 +17,12 @@ MODELS_DIR = Path(__file__).parent.parent.parent / "models"
 
 class ContentVecExtractor:
     """Wrapper for ContentVec feature extraction."""
+class ContentVecExtractor:
+    """Wrapper for ContentVec feature extraction."""
 
     def __init__(self, config: ModelConfig | None = None):
         """
+        Initialize the ContentVec extractor.
         Initialize the ContentVec extractor.
 
         Args:
@@ -31,7 +35,7 @@ class ContentVecExtractor:
         MODELS_DIR.mkdir(parents=True, exist_ok=True)
         cache_dir = str(MODELS_DIR)
 
-        print(f"Loading model: {self.config.model_name}")
+        print(f"Loading ContentVec model: {self.config.model_name}")
         print(f"Model cache: {cache_dir}")
         print(f"Using device: {self.device}")
 
@@ -41,7 +45,7 @@ class ContentVecExtractor:
             cache_dir=cache_dir
         )
 
-        # Load ContentVec model (HuBERT architecture)
+        # Load ContentVec model
         self.model = HubertModel.from_pretrained(
             self.config.model_name,
             cache_dir=cache_dir

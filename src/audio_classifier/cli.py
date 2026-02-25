@@ -83,14 +83,7 @@ Data structure:
         "--pooling",
         choices=["mean", "max"],
         default="mean",
-        help="Pooling strategy for embeddings (default: mean)"
-    )
-
-    parser.add_argument(
-        "--layer",
-        type=int,
-        default=-1,
-        help="Which transformer layer to use (-1 = last, 6 = middle/phonetic) (default: -1)"
+        help="Pooling strategy for ContentVec embeddings (default: mean)"
     )
 
     parser.add_argument(
@@ -138,6 +131,12 @@ Data structure:
         "--save-embeddings",
         type=Path,
         help="Save embeddings to .npz file for later use"
+    )
+
+    parser.add_argument(
+        "--load-cache",
+        type=Path,
+        help="Load pre-computed embeddings from .pkl cache file (skips model loading)"
     )
 
     # Chunking arguments
@@ -325,26 +324,22 @@ Data structure:
         if config.audio.silence_removal_enabled:
             print(f"Silence removal: enabled (threshold: {config.audio.silence_threshold_db}dB)")
 
-        if config.audio.noise_reduction_enabled:
-            mode = "stationary" if config.audio.noise_reduction_stationary else "non-stationary"
-            print(f"Noise reduction: enabled ({mode})")
+        pipeline = AudioClassifierPipeline(config)
 
-        if args.no_cache:
-            print("Cache: disabled")
-        elif args.clear_cache:
-            print("Cache: clearing and rebuilding")
+        if args.load_cache:
+            # Load from cache - skip model loading and extraction
+            pipeline.load_from_cache(args.load_cache)
+            pipeline.reduce_dimensions()
         else:
-            print("Cache: enabled")
+            df = pipeline.run(args.data_dir)
 
-        pipeline = AudioClassifierPipeline(config, use_cache=not args.no_cache, clear_cache=args.clear_cache)
-        df = pipeline.run(args.data_dir)
+            # Save embeddings if requested
+            if args.save_embeddings:
+                pipeline.save_embeddings(args.save_embeddings)
 
-        print(f"\nProcessed {len(df)} audio files")
+        df = pipeline.get_dataframe()
+        print(f"\nProcessed {len(df)} samples")
         print(f"Categories: {sorted(df['label'].unique().tolist())}")
-
-        # Save embeddings if requested
-        if args.save_embeddings:
-            pipeline.save_embeddings(args.save_embeddings)
 
         # Generate visualizations
         pipeline.visualize_and_save(prefix=args.prefix)

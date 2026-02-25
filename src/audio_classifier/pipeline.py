@@ -14,6 +14,7 @@ from .cache import CACHE_FILENAME, EmbeddingCache, compute_config_hash
 from .config import PipelineConfig
 from .preprocessing import AudioPreprocessor
 from .feature_extraction import ContentVecExtractor
+from .feature_extraction import ContentVecExtractor
 from .dimensionality import DimensionalityReducer
 from .visualization import Visualizer
 from .analysis import (
@@ -34,6 +35,7 @@ class AudioSample:
     """Category label (typically folder name)."""
 
     embedding: Optional[np.ndarray] = None
+    """768-dimensional ContentVec embedding."""
     """768-dimensional ContentVec embedding."""
 
     coords_3d: Optional[np.ndarray] = None
@@ -72,6 +74,7 @@ class AudioClassifierPipeline:
     This class coordinates:
     1. Loading audio files from directory structure
     2. Extracting ContentVec embeddings
+    2. Extracting ContentVec embeddings
     3. Reducing dimensions with UMAP
     4. Visualizing results in 3D
 
@@ -95,6 +98,7 @@ class AudioClassifierPipeline:
         # Initialize components (lazy loading for extractor)
         self.preprocessor = AudioPreprocessor(self.config.audio)
         self._extractor: Optional[ContentVecExtractor] = None
+        self._extractor: Optional[ContentVecExtractor] = None
         self.reducer = DimensionalityReducer(self.config.umap)
         self.visualizer = Visualizer(self.config.visualization)
 
@@ -110,25 +114,61 @@ class AudioClassifierPipeline:
     @property
     def extractor(self) -> ContentVecExtractor:
         """Lazy load the ContentVec extractor (downloads model on first use)."""
+    def extractor(self) -> ContentVecExtractor:
+        """Lazy load the ContentVec extractor (downloads model on first use)."""
         if self._extractor is None:
+            self._extractor = ContentVecExtractor(self.config.model)
             self._extractor = ContentVecExtractor(self.config.model)
         return self._extractor
 
-    def _init_cache(self) -> Optional[EmbeddingCache]:
-        """Initialize the embedding cache if caching is enabled."""
-        if not self.use_cache:
-            return None
+    def load_from_cache(self, cache_path: Union[str, Path]) -> None:
+        """
+        Load pre-computed embeddings from a cache file.
 
-        cache_dir = Path(self.config.visualization.output_dir)
-        cache_dir.mkdir(parents=True, exist_ok=True)
-        config_hash = compute_config_hash(self.config)
-        cache = EmbeddingCache(cache_dir, config_hash)
+        Args:
+            cache_path: Path to the .pkl cache file.
+        """
+        import pickle
 
-        if self.clear_cache:
-            cache.clear()
-            cache = EmbeddingCache(cache_dir, config_hash)
+        cache_path = Path(cache_path)
+        if not cache_path.exists():
+            raise FileNotFoundError(f"Cache file not found: {cache_path}")
 
-        return cache
+        print(f"\nLoading embeddings from cache: {cache_path}")
+
+        with open(cache_path, "rb") as f:
+            data = pickle.load(f)
+
+        self.samples = []
+        entries = data.get("entries", {})
+
+        for file_path, entry in entries.items():
+            if not entry.get("samples"):
+                continue
+
+            label = Path(file_path).parent.name
+
+            for sample_data in entry["samples"]:
+                self.samples.append(AudioSample(
+                    file_path=file_path,
+                    label=label,
+                    embedding=sample_data["embedding"],
+                    chunk_index=sample_data.get("chunk_index"),
+                    start_time_seconds=sample_data.get("start_time_seconds"),
+                    end_time_seconds=sample_data.get("end_time_seconds"),
+                    is_padded=sample_data.get("is_padded", False),
+                ))
+
+        if not self.samples:
+            raise ValueError("No embeddings found in cache file.")
+
+        labels = set(s.label for s in self.samples)
+        print(f"Loaded {len(self.samples)} embeddings from cache")
+        print(f"Categories ({len(labels)}): {sorted(labels)}")
+
+        for label in sorted(labels):
+            count = sum(1 for s in self.samples if s.label == label)
+            print(f"  - {label}: {count} samples")
 
     def load_dataset(self, data_dir: Union[str, Path]) -> None:
         """
@@ -184,7 +224,7 @@ class AudioClassifierPipeline:
 
     def extract_embeddings(self, show_progress: bool = True) -> None:
         """
-        Extract HuBERT embeddings for all loaded samples.
+        Extract ContentVec embeddings for all loaded samples.
 
         When chunking is enabled, each audio file is split into chunks
         and each chunk gets its own embedding.
@@ -196,8 +236,6 @@ class AudioClassifierPipeline:
             raise RuntimeError("No samples loaded. Call load_dataset first.")
 
         print("\nExtracting ContentVec embeddings...")
-
-        self._cache = self._init_cache()
 
         if self.config.audio.chunking_enabled:
             self._extract_embeddings_chunked(show_progress)
@@ -462,8 +500,9 @@ class AudioClassifierPipeline:
         print("\nGenerating visualizations...")
 
         # 3D scatter plot
+        # 3D scatter plot
         fig_3d = self.visualizer.plot_3d_scatter(df, title="Audio Embeddings - 3D Visualization")
-        self.visualizer.save_and_open(fig_3d, f"{prefix}_3d.html", data_dir=self.data_dir)
+        self.visualizer.save_and_open(fig_3d, f"{prefix}_3d.html")
 
         # Distance heatmap
         dist_matrix = calculate_centroid_distances(df)

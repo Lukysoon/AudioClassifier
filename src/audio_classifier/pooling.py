@@ -1,5 +1,5 @@
 """
-Pooling strategies for aggregating temporal HuBERT features.
+Pooling strategies for aggregating temporal ContentVec features.
 """
 
 import torch

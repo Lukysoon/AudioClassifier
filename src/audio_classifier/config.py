@@ -106,7 +106,7 @@ class VisualizationConfig:
     marker_opacity: float = 0.9
     """Opacity of markers (0-1)."""
 
-    color_scale: str = "Viridis"
+    color_scale: str = "YlGnBu"
     """Color scale for heatmaps."""
 
     auto_open: bool = True
