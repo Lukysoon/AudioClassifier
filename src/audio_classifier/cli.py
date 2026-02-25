@@ -87,6 +87,13 @@ Data structure:
     )
 
     parser.add_argument(
+        "--layer",
+        type=int,
+        default=-1,
+        help="Which transformer layer to use (-1 = last, 6 = middle) (default: -1)"
+    )
+
+    parser.add_argument(
         "--n-neighbors",
         type=int,
         default=15,
@@ -205,9 +212,9 @@ Data structure:
 
     # Noise reduction arguments
     parser.add_argument(
-        "--noise-reduction",
+        "--no-noise-reduction",
         action="store_true",
-        help="Enable spectral gating noise reduction"
+        help="Disable spectral gating noise reduction (enabled by default)"
     )
 
     parser.add_argument(
@@ -260,9 +267,8 @@ Data structure:
     config.audio.silence_threshold_db = args.silence_threshold
 
     # Noise reduction configuration
-    if args.noise_reduction:
-        config.audio.noise_reduction_enabled = True
-        config.audio.noise_reduction_stationary = not args.noise_non_stationary
+    config.audio.noise_reduction_enabled = not args.no_noise_reduction
+    config.audio.noise_reduction_stationary = not args.noise_non_stationary
 
     # Preprocessing-only mode
     if args.preprocessing_only:
@@ -324,7 +330,11 @@ Data structure:
         if config.audio.silence_removal_enabled:
             print(f"Silence removal: enabled (threshold: {config.audio.silence_threshold_db}dB)")
 
-        pipeline = AudioClassifierPipeline(config)
+        pipeline = AudioClassifierPipeline(
+            config,
+            use_cache=not args.no_cache,
+            clear_cache=args.clear_cache,
+        )
 
         if args.load_cache:
             # Load from cache - skip model loading and extraction

@@ -271,8 +271,9 @@ class Visualizer:
         Returns:
             JavaScript code string.
         """
+        import json as _json
         audio_id_map = {path: _path_to_id(path) for path in audio_data.keys()}
-        audio_id_json = str(audio_id_map).replace("'", '"')
+        audio_id_json = _json.dumps(audio_id_map)
 
         return f'''
         <script>

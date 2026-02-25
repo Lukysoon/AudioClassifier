@@ -54,19 +54,21 @@ source venv/bin/activate && python run.py ./data --chunk 2.0 --chunk-handling di
 | Parametr | Výchozí | Popis |
 |----------|---------|-------|
 | `--max-duration` | `30` | Maximální délka audia v sekundách |
-| `--chunk` | vypnuto | Rozdělí audio na chunky zadané délky (s) |
+| `--chunk SECONDS` | `10` | Přepíše výchozí délku chunků (chunking je zapnutý defaultně) |
 | `--chunk-handling` | `discard` | Zpracování posledního krátkého chunku: `pad` / `discard` / `keep` |
 | `--min-chunk` | `0.5` | Minimální délka chunku pro `keep` režim (s) |
-| `--no-silence-removal` | `False` | Vypnout odstranění ticha |
+| `--no-silence-removal` | - | Vypnout odstranění ticha (zapnuto defaultně) |
 | `--silence-threshold` | `40` | Práh ticha v dB (vyšší = méně citlivé) |
-| `--noise-reduction` | vypnuto | Zapnout spektrální šumovou redukci |
-| `--noise-non-stationary` | `False` | Adaptivní (non-stationary) šumová redukce místo stationary |
+| `--no-noise-reduction` | - | Vypnout spektrální šumovou redukci (zapnuta defaultně) |
+| `--noise-non-stationary` | - | Adaptivní (non-stationary) šumová redukce místo stationary |
 
 #### Model parametry
 
 | Parametr | Výchozí | Popis |
 |----------|---------|-------|
+| `--model` | `contentvec` | Model: `contentvec` / `hubert-base` / `hubert-large` |
 | `--pooling` | `mean` | Pooling strategie: `mean` (průměr) / `max` (maximum) |
+| `--layer` | `-1` | Transformer vrstva (-1 = poslední, 6 = střední) |
 
 #### UMAP parametry
 
@@ -74,54 +76,58 @@ source venv/bin/activate && python run.py ./data --chunk 2.0 --chunk-handling di
 |----------|---------|-------|
 | `--n-neighbors` | `15` | Počet sousedů - nižší = těsnější clustery |
 | `--min-dist` | `0.1` | Minimální vzdálenost - nižší = hustší clustery |
+| `--repulsion` | `1.0` | Síla odpuzování mezi clustery - vyšší = větší separace |
 
 #### Cache parametry
 
 | Parametr | Výchozí | Popis |
 |----------|---------|-------|
-| `--no-cache` | `False` | Vypnout embedding cache (přepočítat vše od začátku) |
-| `--clear-cache` | `False` | Smazat existující cache před spuštěním |
+| `--no-cache` | - | Vypnout embedding cache (přepočítat vše od začátku) |
+| `--clear-cache` | - | Smazat existující cache před spuštěním |
+| `--load-cache FILE` | - | Načíst embeddingy z .pkl souboru (přeskočí model) |
 
 #### Výstupní parametry
 
 | Parametr | Výchozí | Popis |
 |----------|---------|-------|
 | `--output` / `-o` | `./output` | Výstupní složka pro HTML soubory |
-| `--no-open` | `False` | Neotevírat vizualizace v prohlížeči |
-| `--save-embeddings` | vypnuto | Uložit embeddingy do .npz souboru |
+| `--no-open` | - | Neotevírat vizualizace v prohlížeči |
+| `--save-embeddings FILE` | - | Uložit embeddingy do .npz souboru |
 | `--prefix` | `audio_classifier` | Prefix pro názvy výstupních souborů |
 | `--config` / `-c` | - | Načíst konfiguraci z YAML souboru |
 | `--preprocessing-only DIR` | - | Jen preprocessing (bez embeddingů), výstup uložit do DIR |
+| `--umap-only` | - | Přeskočit audio processing, načíst z cache a přegenerovat UMAP + vizualizaci |
 
 #### Příklady
 
 ```bash
-# Základní použití (ticho se automaticky odstraňuje)
+# Základní použití (chunking 10s, noise reduction, silence removal — vše defaultně ON)
 python run.py ./data
 
-# Dlouhé nahrávky s 5s chunky
+# Změnit délku chunků na 5s
 python run.py ./data --chunk 5.0 --chunk-handling keep --min-chunk 1.0
 
 # Těsné clustery pro krátké zvuky
 python run.py ./data --n-neighbors 5 --min-dist 0.01 --pooling max
 
-# Vypnout odstranění ticha
+# Použít HuBERT model se střední vrstvou
+python run.py ./data --model hubert-large --layer 6
+
+# Vypnout noise reduction / silence removal
+python run.py ./data --no-noise-reduction
 python run.py ./data --no-silence-removal
+
+# Adaptivní šumová redukce (pro proměnlivý šum)
+python run.py ./data --noise-non-stationary
 
 # Citlivější detekce ticha (odstraní i tišší zvuky)
 python run.py ./data --silence-threshold 30
 
-# Šumová redukce
-python run.py ./data --noise-reduction
-
-# Adaptivní šumová redukce (pro proměnlivý šum)
-python run.py ./data --noise-reduction --noise-non-stationary
-
-# Bez cache (přepočítat vše)
-python run.py ./data --no-cache
-
 # Smazat cache a přepočítat
 python run.py ./data --clear-cache
+
+# Přegenerovat vizualizaci s jinými UMAP parametry (bez přepočtu embeddingů)
+python run.py ./data --umap-only --n-neighbors 30 --min-dist 0.3
 
 # Jen preprocessing (uložit chunky bez embeddingů)
 python run.py ./data --chunk 5.0 --preprocessing-only ./preprocessed
@@ -134,6 +140,16 @@ Všechny parametry:
 ```bash
 python run.py --help
 ```
+
+## Jupyter Notebook
+
+Alternativní interaktivní workflow v `notebook.ipynb`:
+
+```bash
+jupyter notebook notebook.ipynb
+```
+
+Notebook umožňuje krokové spouštění pipeline a rychlé experimentování s parametry. Podporuje režim **pouze UMAP + vizualizace z cache** — přeskočí extrakci embeddingů a použije uložený cache, takže stačí měnit UMAP parametry a okamžitě vidět výsledek.
 
 ## Výstup
 

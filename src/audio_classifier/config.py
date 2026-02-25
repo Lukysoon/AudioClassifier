@@ -77,10 +77,10 @@ class UMAPConfig:
     n_components: int = 3
     """Number of output dimensions."""
 
-    n_neighbors: int = 5
+    n_neighbors: int = 15
     """Number of neighbors for local structure. Smaller = more local clusters."""
 
-    min_dist: float = 0.05
+    min_dist: float = 0.1
     """Minimum distance in low-dim space. Smaller = tighter clusters."""
 
     metric: str = "cosine"
@@ -100,7 +100,7 @@ class VisualizationConfig:
     output_dir: Path = field(default_factory=lambda: Path("./output"))
     """Directory for output HTML files."""
 
-    marker_size: int = 3
+    marker_size: int = 2
     """Size of markers in 3D plot."""
 
     marker_opacity: float = 0.9

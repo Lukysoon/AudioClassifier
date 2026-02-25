@@ -14,7 +14,6 @@ from .cache import CACHE_FILENAME, EmbeddingCache, compute_config_hash
 from .config import PipelineConfig
 from .preprocessing import AudioPreprocessor
 from .feature_extraction import ContentVecExtractor
-from .feature_extraction import ContentVecExtractor
 from .dimensionality import DimensionalityReducer
 from .visualization import Visualizer
 from .analysis import (
@@ -35,7 +34,6 @@ class AudioSample:
     """Category label (typically folder name)."""
 
     embedding: Optional[np.ndarray] = None
-    """768-dimensional ContentVec embedding."""
     """768-dimensional ContentVec embedding."""
 
     coords_3d: Optional[np.ndarray] = None
@@ -74,7 +72,6 @@ class AudioClassifierPipeline:
     This class coordinates:
     1. Loading audio files from directory structure
     2. Extracting ContentVec embeddings
-    2. Extracting ContentVec embeddings
     3. Reducing dimensions with UMAP
     4. Visualizing results in 3D
 
@@ -98,7 +95,6 @@ class AudioClassifierPipeline:
         # Initialize components (lazy loading for extractor)
         self.preprocessor = AudioPreprocessor(self.config.audio)
         self._extractor: Optional[ContentVecExtractor] = None
-        self._extractor: Optional[ContentVecExtractor] = None
         self.reducer = DimensionalityReducer(self.config.umap)
         self.visualizer = Visualizer(self.config.visualization)
 
@@ -114,10 +110,7 @@ class AudioClassifierPipeline:
     @property
     def extractor(self) -> ContentVecExtractor:
         """Lazy load the ContentVec extractor (downloads model on first use)."""
-    def extractor(self) -> ContentVecExtractor:
-        """Lazy load the ContentVec extractor (downloads model on first use)."""
         if self._extractor is None:
-            self._extractor = ContentVecExtractor(self.config.model)
             self._extractor = ContentVecExtractor(self.config.model)
         return self._extractor
 
@@ -128,8 +121,6 @@ class AudioClassifierPipeline:
         Args:
             cache_path: Path to the .pkl cache file.
         """
-        import pickle
-
         cache_path = Path(cache_path)
         if not cache_path.exists():
             raise FileNotFoundError(f"Cache file not found: {cache_path}")
@@ -475,6 +466,16 @@ class AudioClassifierPipeline:
             DataFrame with file paths, labels, and 3D coordinates.
         """
         self.load_dataset(data_dir)
+
+        # Initialize cache if enabled
+        if self.use_cache:
+            config_hash = compute_config_hash(self.config)
+            self._cache = EmbeddingCache(
+                Path(self.config.visualization.output_dir), config_hash
+            )
+            if self.clear_cache:
+                self._cache.clear()
+
         self.extract_embeddings()
         self.reduce_dimensions()
         return self.get_dataframe()
@@ -499,7 +500,6 @@ class AudioClassifierPipeline:
 
         print("\nGenerating visualizations...")
 
-        # 3D scatter plot
         # 3D scatter plot
         fig_3d = self.visualizer.plot_3d_scatter(df, title="Audio Embeddings - 3D Visualization")
         self.visualizer.save_and_open(fig_3d, f"{prefix}_3d.html")

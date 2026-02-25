@@ -1,6 +1,5 @@
 """
 ContentVec feature extraction module.
-ContentVec feature extraction module.
 """
 
 import numpy as np
@@ -17,12 +16,9 @@ MODELS_DIR = Path(__file__).parent.parent.parent / "models"
 
 class ContentVecExtractor:
     """Wrapper for ContentVec feature extraction."""
-class ContentVecExtractor:
-    """Wrapper for ContentVec feature extraction."""
 
     def __init__(self, config: ModelConfig | None = None):
         """
-        Initialize the ContentVec extractor.
         Initialize the ContentVec extractor.
 
         Args:
