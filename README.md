@@ -146,6 +146,7 @@ python run.py --help
 Alternativní interaktivní workflow v `notebook.ipynb`:
 
 ```bash
+source venv/bin/activate
 jupyter notebook notebook.ipynb
 ```
 

@@ -55,7 +55,7 @@ class AudioConfig:
 
 @dataclass
 class ModelConfig:
-    """ContentVec model parameters."""
+    """Model parameters."""
 
     model_name: str = "safe-models/ContentVec"
     """HuggingFace model identifier."""

@@ -83,7 +83,7 @@ Data structure:
         "--pooling",
         choices=["mean", "max"],
         default="mean",
-        help="Pooling strategy for ContentVec embeddings (default: mean)"
+        help="Pooling strategy for embeddings (default: mean)"
     )
 
     parser.add_argument(
@@ -320,6 +320,7 @@ Data structure:
         print("=" * 60)
         print(f"\nInput: {args.data_dir}")
         print(f"Output: {args.output}")
+        print(f"Model: {config.model.model_name}")
         print(f"Pooling: {config.model.pooling}")
         print(f"Layer: {config.model.layer}")
         print(f"UMAP: n_neighbors={config.umap.n_neighbors}, min_dist={config.umap.min_dist}")

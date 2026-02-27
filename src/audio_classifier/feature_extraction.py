@@ -1,5 +1,5 @@
 """
-ContentVec feature extraction module.
+Audio embedding extraction module.
 """
 
 import numpy as np
@@ -14,8 +14,8 @@ from .pooling import get_pooling_strategy
 MODELS_DIR = Path(__file__).parent.parent.parent / "models"
 
 
-class ContentVecExtractor:
-    """Wrapper for ContentVec feature extraction."""
+class EmbeddingExtractor:
+    """Wrapper for audio embedding extraction (ContentVec, HuBERT, etc.)."""
 
     def __init__(self, config: ModelConfig | None = None):
         """
@@ -31,7 +31,7 @@ class ContentVecExtractor:
         MODELS_DIR.mkdir(parents=True, exist_ok=True)
         cache_dir = str(MODELS_DIR)
 
-        print(f"Loading ContentVec model: {self.config.model_name}")
+        print(f"Loading model: {self.config.model_name}")
         print(f"Model cache: {cache_dir}")
         print(f"Using device: {self.device}")
 
@@ -41,7 +41,7 @@ class ContentVecExtractor:
             cache_dir=cache_dir
         )
 
-        # Load ContentVec model
+        # Load model
         self.model = HubertModel.from_pretrained(
             self.config.model_name,
             cache_dir=cache_dir

@@ -13,7 +13,7 @@ from tqdm import tqdm
 from .cache import CACHE_FILENAME, EmbeddingCache, compute_config_hash
 from .config import PipelineConfig
 from .preprocessing import AudioPreprocessor
-from .feature_extraction import ContentVecExtractor
+from .feature_extraction import EmbeddingExtractor
 from .dimensionality import DimensionalityReducer
 from .visualization import Visualizer
 from .analysis import (
@@ -34,7 +34,7 @@ class AudioSample:
     """Category label (typically folder name)."""
 
     embedding: Optional[np.ndarray] = None
-    """768-dimensional ContentVec embedding."""
+    """768-dimensional embedding."""
 
     coords_3d: Optional[np.ndarray] = None
     """3D coordinates after UMAP reduction."""
@@ -71,7 +71,7 @@ class AudioClassifierPipeline:
 
     This class coordinates:
     1. Loading audio files from directory structure
-    2. Extracting ContentVec embeddings
+    2. Extracting embeddings
     3. Reducing dimensions with UMAP
     4. Visualizing results in 3D
 
@@ -94,7 +94,7 @@ class AudioClassifierPipeline:
 
         # Initialize components (lazy loading for extractor)
         self.preprocessor = AudioPreprocessor(self.config.audio)
-        self._extractor: Optional[ContentVecExtractor] = None
+        self._extractor: Optional[EmbeddingExtractor] = None
         self.reducer = DimensionalityReducer(self.config.umap)
         self.visualizer = Visualizer(self.config.visualization)
 
@@ -108,10 +108,10 @@ class AudioClassifierPipeline:
         self.data_dir: Optional[Path] = None
 
     @property
-    def extractor(self) -> ContentVecExtractor:
-        """Lazy load the ContentVec extractor (downloads model on first use)."""
+    def extractor(self) -> EmbeddingExtractor:
+        """Lazy load the embedding extractor (downloads model on first use)."""
         if self._extractor is None:
-            self._extractor = ContentVecExtractor(self.config.model)
+            self._extractor = EmbeddingExtractor(self.config.model)
         return self._extractor
 
     def load_from_cache(self, cache_path: Union[str, Path]) -> None:
@@ -215,7 +215,7 @@ class AudioClassifierPipeline:
 
     def extract_embeddings(self, show_progress: bool = True) -> None:
         """
-        Extract ContentVec embeddings for all loaded samples.
+        Extract embeddings for all loaded samples.
 
         When chunking is enabled, each audio file is split into chunks
         and each chunk gets its own embedding.
@@ -226,7 +226,7 @@ class AudioClassifierPipeline:
         if not self.samples:
             raise RuntimeError("No samples loaded. Call load_dataset first.")
 
-        print("\nExtracting ContentVec embeddings...")
+        print(f"\nExtracting embeddings ({self.config.model.model_name})...")
 
         if self.config.audio.chunking_enabled:
             self._extract_embeddings_chunked(show_progress)
