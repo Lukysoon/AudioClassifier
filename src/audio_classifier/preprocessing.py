@@ -7,6 +7,13 @@ import numpy as np
 import scipy.io.wavfile as wavfile
 import torch
 import torchaudio
+
+# Fallback: pokud torchcodec nefunguje (chybí FFmpeg libs), použij soundfile
+try:
+    torchaudio.set_audio_backend("soundfile")
+except Exception:
+    pass
+
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Optional, Union
